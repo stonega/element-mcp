@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Element Mcp",
+  "version": "1.0.0",
+  "description": "Select and send DOM elements to a local server",
+  "permissions": ["contextMenus", "activeTab", "storage"],
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["content.css"]
+    }
+  ]
+} 
