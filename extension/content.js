@@ -85,9 +85,9 @@ function handleClick(event) {
   }
   
   // Copy UUID to clipboard
-  navigator.clipboard.writeText(selectedElement.id)
+  navigator.clipboard.writeText(`element://${selectedElement.id}`)
     .then(() => {
-      console.log('Element id copied to clipboard:', selectedElement.id);
+      console.log('Element id copied to clipboard:', `element://${selectedElement.id}`);
     })
     .catch(err => {
       console.error('Failed to copy element id:', err);
@@ -106,7 +106,7 @@ function handleClick(event) {
   
   // Show selection confirmation toast
   const toast = document.createElement('div');
-  toast.textContent = `Element selected: ${selectedElement.tagName.toLowerCase()} | ${selectedElement.id} copied to clipboard`;
+  toast.textContent = `${selectedElement.id} copied to clipboard`;
   toast.style.position = 'fixed';
   toast.style.bottom = '20px';
   toast.style.left = '50%';
@@ -312,6 +312,6 @@ chrome.runtime.sendMessage({action: 'contentScriptLoaded'});
 
 // Add a function to generate a random UUID if not already defined
 function randomUUID() {
-  return 'mcp-' + Math.random().toString(36).substring(2, 15) + 
+  return Math.random().toString(36).substring(2, 15) + 
          Math.random().toString(36).substring(2, 15);
 } 

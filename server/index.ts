@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { 
   getAllElements, 
   getElementById, 
@@ -33,6 +33,36 @@ server.tool("getElementById",
       content: [{ type: "text", text: JSON.stringify(element) }]
     }
   }
+);
+
+server.resource(
+  "element",
+  new ResourceTemplate("element://{id}", { list: undefined }),
+  async (uri, { id }) => {
+    if (!id) {
+      return {
+        contents: [{
+          uri: uri.href,
+          text: "No id provided"
+        }]
+      }
+    }
+    const element = getElementById(id as string);
+    return {
+      contents: [{
+        uri: uri.href,
+        text: JSON.stringify(element)
+      }]
+    }
+  }
+);
+
+server.tool(
+  "echo",
+  { message: z.string() },
+  async ({ message }) => ({
+    content: [{ type: "text", text: `Tool echo: ${message}` }]
+  })
 );
 
 // Add CORS middleware

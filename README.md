@@ -1,29 +1,23 @@
-# Element Mcp
+# Element MCP
 
 ## Description
 
-Element Mcp is a Chrome extension that allows you to select and store DOM elements on a webpage.
+Element MCP is a Chrome extension that allows you to select and store DOM elements on a webpage.
 
 ## Features
 
 - Select and store DOM elements on a webpage
 - View stored elements in a table
-- Delete stored elements
-- Fetch weather data for any city using the MCP tool
-
-## Setup
 
 ## Usage
 
-### Weather Tool
-
-You can use the weather tool to get current weather information for any city:
-
-```
-fetch-weather city="Shanghai"
-```
-
-This will return current weather conditions including temperature, humidity, and wind speed.
+1. Clone the repository
+2. Run `bun start` to start the server
+3. Open Chrome and navigate to `chrome://extensions/`
+4. Click "Load unpacked" and select the `extension` directory
+5. Click "Element MCP" to enable the extension
+6. Select an element on the webpage
+7. The element will be stored in the server
 
 ## Credit
 

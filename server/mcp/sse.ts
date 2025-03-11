@@ -112,7 +112,6 @@ export class SSEEdgeTransport implements Transport {
 			this.onerror?.(error as Error);
 			throw error;
 		}
-		console.log('parsedMessage', parsedMessage);
 		this.onmessage?.(parsedMessage);
 	}
 
