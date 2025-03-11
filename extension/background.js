@@ -46,10 +46,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       body: JSON.stringify({
         elementId: request.elementId,
         tagName: request.tagName,
-        innerHTML: request.innerHTML,
         outerHTML: request.outerHTML,
-        xpath: request.xpath,
-        cssSelector: request.cssSelector,
+        computedStyles: request.computedStyles,
         timestamp: new Date().toISOString()
       })
     })

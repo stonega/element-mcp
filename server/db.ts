@@ -6,10 +6,8 @@ type Element = {
   id?: number;
   elementId: string;
   tagName: string;
-  innerHTML?: string;
   outerHTML?: string;
-  xpath?: string;
-  cssSelector?: string;
+  computedStyles?: Record<string, string>;
   timestamp: string;
 };
 
@@ -27,10 +25,8 @@ export function getDb(): Database {
 export const elementSchema = z.object({
   elementId: z.string(),
   tagName: z.string(),
-  innerHTML: z.string().optional(),
   outerHTML: z.string().optional(),
-  xpath: z.string().optional(),
-  cssSelector: z.string().optional(),
+  computedStyles: z.object({}).optional(),
   timestamp: z.string()
 });
 
@@ -38,17 +34,15 @@ export function createElement(elementData: Element): Element {
   const db = getDb();
   
   const stmt = db.prepare(`
-    INSERT INTO elements (elementId, tagName, innerHTML, outerHTML, xpath, cssSelector, timestamp) 
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO elements (elementId, tagName, outerHTML, computedStyles, timestamp) 
+    VALUES (?, ?, ?, ?, ?)
   `);
   
   stmt.run(
     elementData.elementId,
     elementData.tagName,
-    elementData.innerHTML || '',
     elementData.outerHTML || '',
-    elementData.xpath || '',
-    elementData.cssSelector || '',
+    JSON.stringify(elementData.computedStyles || {}),
     elementData.timestamp
   );
   
@@ -73,16 +67,14 @@ export function updateElement(id: number, elementData: Element): Element | null 
   
   const stmt = db.prepare(`
     UPDATE elements 
-    SET tagName = ?, innerHTML = ?, outerHTML = ?, xpath = ?, cssSelector = ?, timestamp = ?
+    SET tagName = ?, outerHTML = ?, computedStyles = ?, timestamp = ?
     WHERE id = ?
   `);
   
   stmt.run(
     elementData.tagName,
-    elementData.innerHTML || '',
     elementData.outerHTML || '',
-    elementData.xpath || '',
-    elementData.cssSelector || '',
+    elementData.computedStyles || {},
     elementData.timestamp,
     id
   );
@@ -99,21 +91,21 @@ export function setupDatabase(): void {
   const db = getDb();
   
   // Create elements table if it doesn't exist
-  db.query(`
+  const stmt = db.query(`
     CREATE TABLE IF NOT EXISTS elements (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       elementId TEXT NOT NULL,
       tagName TEXT NOT NULL,
-      innerHTML TEXT,
       outerHTML TEXT,
-      xpath TEXT,
-      cssSelector TEXT,
+      computedStyles TEXT,
       timestamp TEXT NOT NULL
     )
   `);
+  stmt.run();
 
   // Add index for faster lookups by elementId
-  db.query(`
+  const stmt2 = db.query(`
     CREATE INDEX IF NOT EXISTS idx_elementId ON elements(elementId)
   `);
+  stmt2.run();
 }

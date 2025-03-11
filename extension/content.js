@@ -33,27 +33,115 @@ function handleMouseOver(event) {
   
   // Prevent highlighting the extension's own elements
   if (event.target.id === 'element-mcp-notification' || 
-      event.target.classList.contains('element-mcp-context-menu')) {
+      event.target.classList.contains('element-mcp-context-menu') ||
+      event.target.id === 'element-mcp-toast' ||
+      event.target.id === 'element-mcp-tooltip' ||
+      event.target.id === 'element-mcp-overlay') {
     return;
   }
   
   // Remove previous hover highlight
   if (hoveredElement && hoveredElement !== selectedElement) {
     hoveredElement.classList.remove('element-mcp-hover');
+    // Remove any existing overlay
+    const existingOverlay = document.getElementById('element-mcp-overlay');
+    if (existingOverlay) {
+      existingOverlay.remove();
+    }
   }
   
   // Add hover highlight to current element
   hoveredElement = event.target;
   if (hoveredElement !== selectedElement) {
     hoveredElement.classList.add('element-mcp-hover');
+    
+    // Create overlay for the hovered element
+    const rect = hoveredElement.getBoundingClientRect();
+    const overlay = document.createElement('div');
+    overlay.id = 'element-mcp-overlay';
+    overlay.style.position = 'absolute';
+    overlay.style.left = `${window.scrollX + rect.left}px`;
+    overlay.style.top = `${window.scrollY + rect.top}px`;
+    overlay.style.width = `${rect.width}px`;
+    overlay.style.height = `${rect.height}px`;
+    overlay.style.backgroundColor = 'rgba(33, 150, 243, 0.3)'; // Semi-transparent blue
+    overlay.style.pointerEvents = 'none'; // Allow clicks to pass through
+    overlay.style.zIndex = '9999';
+    document.body.appendChild(overlay);
+    
+    // Show element tag name tooltip
+    const tooltip = document.createElement('div');
+    tooltip.textContent = hoveredElement.tagName.toLowerCase();
+    if (hoveredElement.id) {
+      tooltip.textContent += ` #${hoveredElement.id}`;
+    } else if (hoveredElement.className) {
+      tooltip.textContent += ` .${hoveredElement.className.split(' ')[0]}`;
+    }
+    
+    tooltip.style.position = 'fixed';
+    tooltip.style.backgroundColor = '#2196F3';
+    tooltip.style.color = 'white';
+    tooltip.style.padding = '4px 8px';
+    tooltip.style.borderRadius = '4px';
+    tooltip.style.fontSize = '12px';
+    tooltip.style.zIndex = '10001';
+    tooltip.style.pointerEvents = 'none';
+    tooltip.id = 'element-mcp-tooltip';
+    
+    // Position the tooltip near the cursor
+    tooltip.style.left = (event.clientX + 10) + 'px';
+    tooltip.style.top = (event.clientY + 10) + 'px';
+    
+    // Remove any existing tooltip
+    const existingTooltip = document.getElementById('element-mcp-tooltip');
+    if (existingTooltip) {
+      existingTooltip.remove();
+    }
+    
+    document.body.appendChild(tooltip);
   }
   
   event.stopPropagation();
 }
 
+// Add a mousemove event listener to update tooltip position and overlay
+document.addEventListener('mousemove', function(event) {
+  if (!isSelectionMode) return;
+  
+  const tooltip = document.getElementById('element-mcp-tooltip');
+  if (tooltip) {
+    tooltip.style.left = (event.clientX + 10) + 'px';
+    tooltip.style.top = (event.clientY + 10) + 'px';
+  }
+  
+  // Update overlay position if element size/position changes
+  if (hoveredElement) {
+    const overlay = document.getElementById('element-mcp-overlay');
+    if (overlay) {
+      const rect = hoveredElement.getBoundingClientRect();
+      overlay.style.left = `${window.scrollX + rect.left}px`;
+      overlay.style.top = `${window.scrollY + rect.top}px`;
+      overlay.style.width = `${rect.width}px`;
+      overlay.style.height = `${rect.height}px`;
+    }
+  }
+}, true);
+
 // Handle click event for selecting an element
 function handleClick(event) {
   if (!isSelectionMode) return;
+  
+  // Remove tooltip if it exists
+  const tooltip = document.getElementById('element-mcp-tooltip');
+  if (tooltip) {
+    tooltip.remove();
+  }
+  
+  // Remove overlay if it exists
+  const overlay = document.getElementById('element-mcp-overlay');
+  if (overlay) {
+    overlay.remove();
+  }
   
   // Prevent selecting the extension's own elements
   if (event.target.id === 'element-mcp-notification' || 
@@ -84,6 +172,9 @@ function handleClick(event) {
     selectedElement.id = randomUUID();
   }
   
+  // Remove the element-mcp-selected class immediately before saving
+  selectedElement.classList.remove('element-mcp-selected');
+  
   // Copy UUID to clipboard
   navigator.clipboard.writeText(`element://${selectedElement.id}`)
     .then(() => {
@@ -98,10 +189,8 @@ function handleClick(event) {
     action: 'elementSelected',
     elementId: selectedElement.id,
     tagName: selectedElement.tagName,
-    innerHTML: selectedElement.innerHTML,
-    outerHTML: selectedElement.outerHTML,
-    xpath: getXPath(selectedElement),
-    cssSelector: getCssSelector(selectedElement)
+    outerHTML: compressHTML(selectedElement.outerHTML),
+    computedStyles: getElementStyles(selectedElement)
   });
   
   // Show selection confirmation toast
@@ -164,11 +253,31 @@ function handleContextMenu(event) {
   selectParentOption.textContent = 'Select Parent';
   selectParentOption.style.padding = '8px 12px';
   selectParentOption.style.cursor = 'pointer';
-  selectParentOption.addEventListener('click', () => {
+  selectParentOption.style.backgroundColor = '#f8f8f8';
+  selectParentOption.addEventListener('mouseenter', () => {
+    selectParentOption.style.backgroundColor = '#f0f0f0';
+  });
+  selectParentOption.addEventListener('mouseleave', () => {
+    selectParentOption.style.backgroundColor = '#f8f8f8';
+  });
+  selectParentOption.addEventListener('click', (e) => {
+    e.stopPropagation();
     if (selectedElement.parentElement) {
       selectedElement.classList.remove('element-mcp-selected');
       selectedElement = selectedElement.parentElement;
       selectedElement.classList.add('element-mcp-selected');
+      
+      if (!selectedElement.id) {
+        selectedElement.id = randomUUID();
+      }
+      
+      navigator.clipboard.writeText(`element://${selectedElement.id}`)
+        .then(() => {
+          console.log('Parent element id copied to clipboard:', `element://${selectedElement.id}`);
+        })
+        .catch(err => {
+          console.error('Failed to copy parent element id:', err);
+        });
     }
     contextMenu.remove();
   });
@@ -181,71 +290,15 @@ function handleContextMenu(event) {
   document.body.appendChild(contextMenu);
   
   // Close context menu when clicking outside
-  document.addEventListener('click', function closeMenu() {
-    contextMenu.remove();
-    document.removeEventListener('click', closeMenu);
+  document.addEventListener('click', function closeMenu(e) {
+    if (!contextMenu.contains(e.target)) {
+      contextMenu.remove();
+      document.removeEventListener('click', closeMenu);
+    }
   });
   
   event.preventDefault();
-}
-
-// Get XPath for element
-function getXPath(element) {
-  if (!element) return '';
-  
-  if (element.id) {
-    return `//*[@id="${element.id}"]`;
-  }
-  
-  if (element === document.body) {
-    return '/html/body';
-  }
-  
-  let ix = 0;
-  const siblings = element.parentNode.childNodes;
-  
-  for (let i = 0; i < siblings.length; i++) {
-    const sibling = siblings[i];
-    
-    if (sibling === element) {
-      return getXPath(element.parentNode) + '/' + element.tagName.toLowerCase() + '[' + (ix + 1) + ']';
-    }
-    
-    if (sibling.nodeType === 1 && sibling.tagName === element.tagName) {
-      ix++;
-    }
-  }
-}
-
-// Get CSS selector for element
-function getCssSelector(element) {
-  if (!element) return '';
-  
-  if (element.id) {
-    return '#' + element.id;
-  }
-  
-  if (element === document.body) {
-    return 'body';
-  }
-  
-  let path = '';
-  while (element.nodeType === Node.ELEMENT_NODE) {
-    let selector = element.nodeName.toLowerCase();
-    
-    if (element.id) {
-      selector = '#' + element.id;
-      path = selector + ' ' + path;
-      break;
-    } else if (element.className) {
-      selector += '.' + element.className.replace(/\s+/g, '.');
-    }
-    
-    path = selector + ' ' + path;
-    element = element.parentNode;
-  }
-  
-  return path.trim();
+  event.stopPropagation();
 }
 
 // Listen for messages from background script
@@ -260,33 +313,6 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 document.addEventListener('mouseover', handleMouseOver, true);
 document.addEventListener('click', handleClick, true);
 document.addEventListener('contextmenu', handleContextMenu, true);
-
-// Set up SSE connection
-function setupSSEConnection() {
-  const eventSource = new EventSource('http://localhost:5000/api/sse/events');
-  
-  eventSource.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    console.log('SSE event received:', data);
-    
-    // Handle different event types
-    switch (data.type) {
-      case 'elementSelected':
-        highlightElement(data.element);
-        break;
-      // Handle other event types as needed
-    }
-  };
-  
-  eventSource.onerror = (error) => {
-    console.error('SSE connection error:', error);
-    eventSource.close();
-    // Attempt to reconnect after a delay
-    setTimeout(setupSSEConnection, 5000);
-  };
-  
-  return eventSource;
-}
 
 function highlightElement(elementData) {
   const element = document.getElementById(elementData.id);
@@ -314,4 +340,84 @@ chrome.runtime.sendMessage({action: 'contentScriptLoaded'});
 function randomUUID() {
   return Math.random().toString(36).substring(2, 15) + 
          Math.random().toString(36).substring(2, 15);
+}
+
+// Function to compress/truncate HTML content
+function compressHTML(html) {
+  if (!html) return '';
+  
+  // Remove excessive whitespace
+  let compressed = html.replace(/\s+/g, ' ').trim();
+  
+  // Set maximum length (adjust as needed)
+  const maxLength = 5000;
+  
+  if (compressed.length > maxLength) {
+    // Truncate and add indicator
+    compressed = compressed.substring(0, maxLength) + '... [content truncated]';
+  }
+  
+  return compressed;
+}
+
+// Function to get computed styles of an element
+function getElementStyles(element) {
+  const computedStyle = window.getComputedStyle(element);
+  const importantStyles = {
+    // Layout
+    position: computedStyle.position,
+    display: computedStyle.display,
+    width: computedStyle.width,
+    height: computedStyle.height,
+    margin: computedStyle.margin,
+    padding: computedStyle.padding,
+    
+    // Visual
+    backgroundColor: computedStyle.backgroundColor,
+    color: computedStyle.color,
+    fontSize: computedStyle.fontSize,
+    fontFamily: computedStyle.fontFamily,
+    fontWeight: computedStyle.fontWeight,
+    
+    // Box model
+    border: computedStyle.border,
+    borderRadius: computedStyle.borderRadius,
+    boxShadow: computedStyle.boxShadow,
+    
+    // Flexbox (if applicable)
+    flexDirection: computedStyle.flexDirection,
+    justifyContent: computedStyle.justifyContent,
+    alignItems: computedStyle.alignItems,
+    
+    // Grid (if applicable)
+    gridTemplateColumns: computedStyle.gridTemplateColumns,
+    gridTemplateRows: computedStyle.gridTemplateRows,
+    
+    // Positioning
+    top: computedStyle.top,
+    left: computedStyle.left,
+    right: computedStyle.right,
+    bottom: computedStyle.bottom,
+    zIndex: computedStyle.zIndex,
+    
+    // Transform
+    transform: computedStyle.transform,
+    
+    // Transition
+    transition: computedStyle.transition,
+    
+    // Visibility
+    opacity: computedStyle.opacity,
+    visibility: computedStyle.visibility,
+    
+    // Overflow
+    overflow: computedStyle.overflow
+  };
+
+  // Filter out 'initial' or default values to reduce data size
+  return Object.fromEntries(
+    Object.entries(importantStyles).filter(([_, value]) => {
+      return value !== 'initial' && value !== 'none' && value !== 'normal' && value !== '0px' && value !== 'auto';
+    })
+  );
 } 
