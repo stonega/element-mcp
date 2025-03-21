@@ -3,7 +3,7 @@
   "name": "Element Mcp",
   "version": "1.0.0",
   "description": "Select and send DOM elements to a local server",
-  "permissions": ["contextMenus", "activeTab", "storage"],
+  "permissions": ["contextMenus", "activeTab", "storage", "scripting", "tabs", "desktopCapture"],
   "action": {
     "default_icon": {
       "16": "icons/icon16.png",

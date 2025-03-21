@@ -38,6 +38,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   
   if (request.action === 'elementSelected') {
     // Send selected element data to local server
+    console.log('Sending element data to local server:', {
+      elementId: request.elementId,
+      tagName: request.tagName,
+      outerHTML: request.outerHTML,
+      computedStyles: JSON.parse(request.computedStyles)
+    });
     fetch('http://localhost:5000/api/elements', {
       method: 'POST',
       headers: {
@@ -61,34 +67,41 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     
     sendResponse({status: 'Element data sent to server'});
   }
-  
-  if (request.action === 'selectElementById') {
-    selectElementById(request.id)
-      .then(result => sendResponse(result))
-      .catch(error => sendResponse({ success: false, message: error.message }));
-    return true; // Indicates async response
-  }
-  
-  return true;
-});
 
-// Function to select element by ID
-async function selectElementById(id) {
-  try {
-    const response = await fetch('http://localhost:5000/api/sse/selectElementById', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ id })
+  // Handle screenshot capture request
+  if (request.action === 'captureElementScreenshot') {
+    // Adjust padding calculation for the screenshot area
+    const padding = 10; // 10px padding on all sides
+    const area = {
+      x: Math.max(0, request.area.x - padding),
+      y: Math.max(0, request.area.y - padding),
+      width: Math.max(1, request.area.width + padding * 2),
+      height: Math.max(1, request.area.height + padding * 2)
+    };
+    
+    chrome.tabs.captureVisibleTab(null, {format: 'png'}, function(dataUrl) {
+      if (chrome.runtime.lastError) {
+        console.error(chrome.runtime.lastError);
+        sendResponse({error: chrome.runtime.lastError});
+        return;
+      }
+      
+      // Send the dataUrl and adjusted area to the content script
+      chrome.tabs.sendMessage(sender.tab.id, {
+        action: 'processScreenshot',
+        dataUrl: dataUrl,
+        area: area
+      }, function(response) {
+        if (response && response.dataUrl) {
+          sendResponse({dataUrl: response.dataUrl});
+        } else {
+          sendResponse({error: 'Failed to process screenshot'});
+        }
+      });
     });
     
-    const result = await response.json();
-    return result;
-  } catch (error) {
-    console.error('Error selecting element by ID:', error);
-    return { success: false, message: error.message };
+    return true; // Required for async sendResponse
   }
-}
 
-// Make sure any tools or APIs you're using are properly referenced 
+  return true;
+});

@@ -57,14 +57,6 @@ server.resource(
   }
 );
 
-server.tool(
-  "echo",
-  { message: z.string() },
-  async ({ message }) => ({
-    content: [{ type: "text", text: `Tool echo: ${message}` }]
-  })
-);
-
 // Add CORS middleware
 app.use('/*', cors());
 

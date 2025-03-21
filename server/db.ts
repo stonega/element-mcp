@@ -7,7 +7,7 @@ type Element = {
   elementId: string;
   tagName: string;
   outerHTML?: string;
-  computedStyles?: Record<string, string>;
+  computedStyles?: string;
   timestamp: string;
 };
 
@@ -26,7 +26,7 @@ export const elementSchema = z.object({
   elementId: z.string(),
   tagName: z.string(),
   outerHTML: z.string().optional(),
-  computedStyles: z.object({}).optional(),
+  computedStyles: z.string().optional(),
   timestamp: z.string()
 });
 
@@ -42,7 +42,7 @@ export function createElement(elementData: Element): Element {
     elementData.elementId,
     elementData.tagName,
     elementData.outerHTML || '',
-    JSON.stringify(elementData.computedStyles || {}),
+    elementData.computedStyles || '',
     elementData.timestamp
   );
   

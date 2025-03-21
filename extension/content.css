@@ -1,15 +1,9 @@
-.element-mcp-hover {
-  outline: 2px dashed #ff6b6b !important;
-  outline-offset: 2px !important;
-}
-
 .element-mcp-selected {
   outline: 3px solid #4ecdc4 !important;
   outline-offset: 2px !important;
 }
 
 .mcp-highlighted {
-  outline: 3px solid #ff5722 !important;
   background-color: rgba(255, 87, 34, 0.1) !important;
   transition: all 0.3s ease-in-out !important;
   z-index: 9999 !important;
